@@ -72,10 +72,10 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
   const validate = (): string | null => {
     if (!empresa.trim()) return "Informe o nome da empresa.";
     if (!responsavel.trim()) return "Informe o responsável.";
-    if (installments.some((item) => !item.numero.trim())) return "Informe o número de todos os boletos.";
+    
     if (installments.some((item) => !item.valor || item.valor <= 0)) return "Informe um valor válido para todos os boletos.";
     if (installments.some((item) => !item.dataVencimento)) return "Informe o vencimento de todos os boletos.";
-    const numbers = installments.map((item) => item.numero.trim());
+    const numbers = installments.map((item) => item.numero.trim()).filter(Boolean);
     if (new Set(numbers).size !== numbers.length) return "Cada boleto desta NF-e precisa ter um número diferente.";
     return null;
   };
@@ -169,7 +169,7 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
                   </div>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                     <div>
-                      <label className={labelClass}>Número *</label>
+                      <label className={labelClass}>{item.status === "Nota sem boleto" ? "Número (opcional)" : "Número *"}</label>
                       <input type="text" value={item.numero} onChange={(e) => updateInstallment(index, "numero", e.target.value)} className={fieldClass} placeholder="000123" />
                     </div>
                     <div>
