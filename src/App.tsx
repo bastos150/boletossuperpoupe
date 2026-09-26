@@ -14,11 +14,10 @@ import { supabase } from "@/lib/supabase";
 import { exportToCSV } from "@/utils/csv";
 import { daysUntil, todayISO } from "@/utils/format";
 
-const STATUS_VALUES: Status[] = ["Lançado", "Pendente", "Pago", "Vencido", "Cancelado", "Nota sem boleto", "Boleto sem nota"];
 const ALERT_STATUSES = ["Lançado", "Pendente"];
 
 function Dashboard() {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
 
   const [boletos, setBoletos] = useState<Boleto[]>([]);
   const [users, setUsers] = useState<UserInfo[]>([]);
@@ -153,17 +152,18 @@ function Dashboard() {
   ): string | null => {
     const existingNumbers = new Set(
       boletos
-        .filter((b) => b.id !== id)
+        .filter((b) => b.id !== id && b.numero.trim())
         .map((b) => `${b.empresa.trim().toLowerCase()}::${b.numero.trim()}`),
     );
-    const duplicate = installments.find((item) =>
-      existingNumbers.has(`${shared.empresa.trim().toLowerCase()}::${item.numero.trim()}`),
-    );
+    const duplicate = installments.find((item) => {
+      const numero = item.numero.trim();
+      return numero && existingNumbers.has(`${shared.empresa.trim().toLowerCase()}::${numero}`);
+    });
     if (duplicate) {
       return `O boleto ${duplicate.numero} desta empresa já está cadastrado.`;
     }
 
-    const overdue = installments.find((item) => item.dataVencimento < todayISO());
+    const overdue = installments.find((item) => item.dataVencimento && item.dataVencimento < todayISO());
     if (overdue) {
       return "A data de vencimento não pode ser anterior à data de hoje.";
     }
