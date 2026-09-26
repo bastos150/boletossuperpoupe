@@ -153,17 +153,17 @@ function Dashboard() {
   ): string | null => {
     const existingNumbers = new Set(
       boletos
-        .filter((b) => b.id !== id)
+        .filter((b) => b.id !== id && b.numero.trim())
         .map((b) => `${b.empresa.trim().toLowerCase()}::${b.numero.trim()}`),
     );
     const duplicate = installments.find((item) =>
-      existingNumbers.has(`${shared.empresa.trim().toLowerCase()}::${item.numero.trim()}`),
+      item.numero.trim() && existingNumbers.has(`${shared.empresa.trim().toLowerCase()}::${item.numero.trim()}`),
     );
     if (duplicate) {
       return `O boleto ${duplicate.numero} desta empresa já está cadastrado.`;
     }
 
-    const overdue = installments.find((item) => item.dataVencimento < todayISO());
+    const overdue = installments.find((item) => item.dataVencimento && item.dataVencimento < todayISO());
     if (overdue) {
       return "A data de vencimento não pode ser anterior à data de hoje.";
     }
