@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { X, Save, PlusCircle, CheckCircle2, Trash2 } from "lucide-react";
 import type { Boleto, BoletoInstallment, Status } from "@/types";
 import { todayISO, formatDate } from "@/utils/format";
@@ -69,7 +70,7 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
     );
   };
 
-  const validate = (): string | null => {
+  const validate = (): string | null => { if (!responsavel.trim()) return "Informe o responsável."; if (installments.some((item) => item.status !== "Nota sem boleto" && !item.numero.trim())) return "Informe o número de todos os boletos ou selecione Nota sem boleto.";
     if (!empresa.trim()) return "Informe o nome da empresa.";
     const boletos = installments.filter((item) => item.status !== "Nota sem boleto");
     if (boletos.some((item) => !item.numero.trim())) {
