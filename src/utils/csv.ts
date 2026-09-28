@@ -18,7 +18,7 @@ export function exportToCSV(boletos: Boleto[]): void {
     b.empresa,
     b.nfe,
     b.numero,
-    formatCurrency(b.valor),
+    formatCurrency(b.status === "Nota sem boleto" ? b.valorNfe : b.valor),
     formatDate(b.dataLancamento),
     formatDate(b.dataVencimento),
     b.status,

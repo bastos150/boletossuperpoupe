@@ -7,6 +7,7 @@ export interface Boleto {
   nfe: string;
   numero: string;
   valor: number;
+  valorNfe: number;
   dataLancamento: string;
   dataVencimento: string;
   status: Status;
@@ -24,6 +25,7 @@ export type BoletoForm = Omit<Boleto, "id" | "user_id" | "user_email" | "user_no
 export interface BoletoInstallment {
   numero: string;
   valor: number;
+  valorNfe: number;
   dataVencimento: string;
   status: Status;
 }

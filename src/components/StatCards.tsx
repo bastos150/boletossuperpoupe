@@ -13,6 +13,7 @@ interface StatCardsProps {
 }
 
 export function StatCards({ boletos }: StatCardsProps) {
+  const valueOf = (b: Boleto) => b.status === "Nota sem boleto" ? b.valorNfe : b.valor;
   const total = boletos.length;
   const nfeCount = new Set(boletos.filter((b) => b.nfe).map((b) => b.nfe)).size;
   const pendentes = boletos.filter((b) => b.status === "Pendente");
@@ -21,14 +22,14 @@ export function StatCards({ boletos }: StatCardsProps) {
     return (b.status === "Pendente" || b.status === "Lançado") && d >= 0 && d <= 3;
   });
 
-  const totalPendenteValor = pendentes.reduce((s, b) => s + b.valor, 0);
-  const vencem3diasValor = vencem3dias.reduce((s, b) => s + b.valor, 0);
+  const totalPendenteValor = pendentes.reduce((s, b) => s + valueOf(b), 0);
+  const vencem3diasValor = vencem3dias.reduce((s, b) => s + valueOf(b), 0);
 
   const cards = [
     {
       label: "Total de boletos",
       value: String(total),
-      sub: formatCurrency(boletos.reduce((s, b) => s + b.valor, 0)),
+      sub: formatCurrency(boletos.reduce((s, b) => s + valueOf(b), 0)),
       icon: FileText,
       color: "bg-[#0a1f44]",
       iconBg: "bg-white/15",

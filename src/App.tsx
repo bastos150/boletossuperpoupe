@@ -44,7 +44,7 @@ function Dashboard() {
     const { data, error } = await supabase
       .from("boletos")
       .select(`
-        id, empresa, cnpj, nfe, numero, valor, data_lancamento, data_vencimento,
+        id, empresa, cnpj, nfe, numero, valor, valor_nfe, data_lancamento, data_vencimento,
         status, responsavel, observacoes, user_id, updated_by, updated_at,
         user_profiles!boletos_user_profiles_fkey (email, nome)
       `)
@@ -63,10 +63,11 @@ function Dashboard() {
         empresa: row.empresa as string,
         cnpj: (row.cnpj as string) || "",
         nfe: (row.nfe as string) || "",
-        numero: row.numero as string,
-        valor: Number(row.valor),
+        numero: (row.numero as string) || "",
+        valor: Number(row.valor) || 0,
+        valorNfe: Number(row.valor_nfe) || 0,
         dataLancamento: row.data_lancamento as string,
-        dataVencimento: row.data_vencimento as string,
+        dataVencimento: (row.data_vencimento as string) || "",
         status: row.status as Status,
         responsavel: (row.responsavel as string) || "",
         observacoes: (row.observacoes as string) || "",
@@ -135,7 +136,7 @@ function Dashboard() {
       if (periodEnd && b.dataVencimento > periodEnd) return false;
       if (userFilter && b.user_id !== userFilter) return false;
       if (q) {
-        const hay = `${b.empresa} ${b.cnpj} ${b.numero} ${b.nfe} ${b.dataLancamento} ${b.dataVencimento} ${b.valor}`.toLowerCase();
+        const hay = `${b.empresa} ${b.cnpj} ${b.numero} ${b.nfe} ${b.dataLancamento} ${b.dataVencimento} ${b.valor} ${b.valorNfe}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -178,6 +179,7 @@ function Dashboard() {
           nfe: shared.nfe,
           numero: hasBoleto ? inst.numero.trim() : null,
           valor: hasBoleto ? inst.valor : null,
+          valor_nfe: hasBoleto ? null : inst.valorNfe,
           data_vencimento: hasBoleto ? inst.dataVencimento : null,
           status: inst.status,
           responsavel: null,
@@ -197,6 +199,7 @@ function Dashboard() {
           nfe: shared.nfe,
           numero: hasBoleto ? inst.numero.trim() : null,
           valor: hasBoleto ? inst.valor : null,
+          valor_nfe: hasBoleto ? null : inst.valorNfe,
           data_lancamento: today,
           data_vencimento: hasBoleto ? inst.dataVencimento : null,
           status: inst.status,

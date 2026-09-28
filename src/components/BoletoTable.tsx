@@ -103,6 +103,7 @@ export function BoletoTable({
               const hasMultipleBoletos =
                 !!b.nfe.trim() && (boletoByNfe.get(b.nfe.trim())?.size ?? 0) > 1;
               const hasBoletoWithoutNfe = !b.nfe.trim() && !hasNoBoleto;
+              const displayValue = b.status === "Nota sem boleto" ? b.valorNfe : b.valor;
 
               return (
                 <tr
@@ -131,7 +132,7 @@ export function BoletoTable({
                     {b.numero || <span className="rounded bg-yellow-200 px-2 py-0.5 font-semibold text-yellow-800">Sem boleto</span>}
                   </td>
                   <td className="px-4 py-3 font-semibold text-gray-800">
-                    {formatCurrency(b.valor)}
+                    {formatCurrency(displayValue)}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {formatDate(b.dataLancamento)}

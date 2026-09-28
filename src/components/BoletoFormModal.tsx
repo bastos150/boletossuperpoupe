@@ -16,7 +16,7 @@ interface BoletoFormModalProps {
 }
 
 function emptyInstallment(): BoletoInstallment {
-  return { numero: "", valor: 0, dataVencimento: "", status: "Lançado" };
+  return { numero: "", valor: 0, valorNfe: 0, dataVencimento: "", status: "Lançado" };
 }
 
 export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormModalProps) {
@@ -37,6 +37,7 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
       setInstallments([{
         numero: editing.numero,
         valor: editing.valor,
+        valorNfe: editing.valorNfe,
         dataVencimento: editing.dataVencimento,
         status: editing.status,
       }]);
@@ -70,14 +71,18 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
     );
   };
 
-  const validate = (): string | null => { if (!responsavel.trim()) return "Informe o responsável."; if (installments.some((item) => item.status !== "Nota sem boleto" && !item.numero.trim())) return "Informe o número de todos os boletos ou selecione Nota sem boleto.";
+  const validate = (): string | null => {
     if (!empresa.trim()) return "Informe o nome da empresa.";
+    const notasSemBoleto = installments.filter((item) => item.status === "Nota sem boleto");
     const boletos = installments.filter((item) => item.status !== "Nota sem boleto");
     if (boletos.some((item) => !item.numero.trim())) {
       return "Informe o número de todos os boletos ou selecione Nota sem boleto.";
     }
     if (boletos.some((item) => !item.valor || item.valor <= 0)) return "Informe um valor válido para todos os boletos.";
     if (boletos.some((item) => !item.dataVencimento)) return "Informe o vencimento de todos os boletos.";
+    if (notasSemBoleto.some((item) => !item.valorNfe || item.valorNfe <= 0)) {
+      return "Informe o valor da NF-e sem boleto.";
+    }
     const numbers = boletos.map((item) => item.numero.trim()).filter(Boolean);
     if (new Set(numbers).size !== numbers.length) return "Cada boleto desta NF-e precisa ter um número diferente.";
     return null;
@@ -151,7 +156,7 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-[#0a1f44]">Boletos desta NF-e</h3>
-                <p className="text-xs text-gray-500">Cadastre cada parcela com seu próprio número, valor e vencimento.</p>
+                <p className="text-xs text-gray-500">Cadastre cada parcela com número, valor e vencimento. Para NF-e sem boleto, informe o valor da NF-e.</p>
               </div>
               {!editing && (
                 <button type="button" onClick={() => setInstallments((current) => [...current, emptyInstallment()])} className="inline-flex items-center gap-1.5 rounded-md bg-[#0a1f44] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0d2a5c]">
@@ -175,8 +180,8 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
                       <input type="text" value={item.numero} disabled={item.status === "Nota sem boleto"} onChange={(e) => updateInstallment(index, "numero", e.target.value)} className={`${fieldClass} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`} placeholder={item.status === "Nota sem boleto" ? "Sem boleto" : "000123"} />
                     </div>
                     <div>
-                      <label className={labelClass}>{item.status === "Nota sem boleto" ? "Valor (não se aplica)" : "Valor (R$) *"}</label>
-                      <input type="number" step="0.01" min="0" value={item.valor || ""} disabled={item.status === "Nota sem boleto"} onChange={(e) => updateInstallment(index, "valor", parseFloat(e.target.value) || 0)} className={`${fieldClass} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`} placeholder={item.status === "Nota sem boleto" ? "Sem boleto" : "0,00"} />
+                      <label className={labelClass}>{item.status === "Nota sem boleto" ? "Valor da NF-e (R$) *" : "Valor do boleto (R$) *"}</label>
+                      <input type="number" step="0.01" min="0" value={(item.status === "Nota sem boleto" ? item.valorNfe : item.valor) || ""} onChange={(e) => updateInstallment(index, item.status === "Nota sem boleto" ? "valorNfe" : "valor", parseFloat(e.target.value) || 0)} className={fieldClass} placeholder="0,00" />
                     </div>
                     <div>
                       <label className={labelClass}>{item.status === "Nota sem boleto" ? "Vencimento (não se aplica)" : "Vencimento *"}</label>
