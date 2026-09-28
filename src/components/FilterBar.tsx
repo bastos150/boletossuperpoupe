@@ -62,7 +62,7 @@ export function FilterBar({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar empresa, CNPJ, boleto, NF-e, valor, data ou responsável"
+            placeholder="Buscar empresa, CNPJ, boleto, NF-e, valor ou data"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[#0a1f44] focus:ring-1 focus:ring-[#0a1f44]"

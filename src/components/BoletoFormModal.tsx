@@ -10,7 +10,6 @@ interface BoletoFormModalProps {
   onSave: (installments: BoletoInstallment[], shared: {
     empresa: string;
     nfe: string;
-    responsavel: string;
     observacoes: string;
   }, id?: string) => string | null;
 }
@@ -22,7 +21,6 @@ function emptyInstallment(): BoletoInstallment {
 export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormModalProps) {
   const [empresa, setEmpresa] = useState("");
   const [nfe, setNfe] = useState("");
-  const [responsavel, setResponsavel] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [dataLancamento, setDataLancamento] = useState(todayISO());
   const [installments, setInstallments] = useState<BoletoInstallment[]>([emptyInstallment()]);
@@ -33,7 +31,6 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
     if (editing) {
       setEmpresa(editing.empresa);
       setNfe(editing.nfe);
-      setResponsavel(editing.responsavel);
       setObservacoes(editing.observacoes);
       setDataLancamento(editing.dataLancamento);
       setInstallments([{
@@ -46,7 +43,6 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
     } else {
       setEmpresa("");
       setNfe("");
-      setResponsavel("");
       setObservacoes("");
       setDataLancamento(todayISO());
       setInstallments([emptyInstallment()]);
@@ -64,30 +60,33 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
   ) => {
     setInstallments((current) =>
       current.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: value } : item,
+        itemIndex !== index
+          ? item
+          : field === "status" && value === "Nota sem boleto"
+            ? { ...item, numero: "", valor: 0, dataVencimento: "", status: "Nota sem boleto" }
+            : { ...item, [field]: value },
       ),
     );
   };
 
   const validate = (): string | null => {
     if (!empresa.trim()) return "Informe o nome da empresa.";
-    if (!responsavel.trim()) return "Informe o responsável.";
-    if (installments.some((item) => item.status !== "Nota sem boleto" && !item.numero.trim())) {
+    const boletos = installments.filter((item) => item.status !== "Nota sem boleto");
+    if (boletos.some((item) => !item.numero.trim())) {
       return "Informe o número de todos os boletos ou selecione Nota sem boleto.";
     }
-    if (installments.some((item) => !item.valor || item.valor <= 0)) return "Informe um valor válido para todos os boletos.";
-    if (installments.some((item) => !item.dataVencimento)) return "Informe o vencimento de todos os boletos.";
-    const numbers = installments.map((item) => item.numero.trim()).filter(Boolean);
+    if (boletos.some((item) => !item.valor || item.valor <= 0)) return "Informe um valor válido para todos os boletos.";
+    if (boletos.some((item) => !item.dataVencimento)) return "Informe o vencimento de todos os boletos.";
+    const numbers = boletos.map((item) => item.numero.trim()).filter(Boolean);
     if (new Set(numbers).size !== numbers.length) return "Cada boleto desta NF-e precisa ter um número diferente.";
     return null;
   };
 
-  const shared = { empresa, nfe, responsavel, observacoes };
+  const shared = { empresa, nfe, observacoes };
 
   const resetForNext = () => {
     setEmpresa("");
     setNfe("");
-    setResponsavel("");
     setObservacoes("");
     setDataLancamento(todayISO());
     setInstallments([emptyInstallment()]);
@@ -171,16 +170,16 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
                   </div>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                     <div>
-                      <label className={labelClass}>{item.status === "Nota sem boleto" ? "Número (opcional)" : "Número *"}</label>
-                      <input type="text" value={item.numero} onChange={(e) => updateInstallment(index, "numero", e.target.value)} className={fieldClass} placeholder="000123" />
+                      <label className={labelClass}>{item.status === "Nota sem boleto" ? "Número (não se aplica)" : "Número *"}</label>
+                      <input type="text" value={item.numero} disabled={item.status === "Nota sem boleto"} onChange={(e) => updateInstallment(index, "numero", e.target.value)} className={`${fieldClass} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`} placeholder={item.status === "Nota sem boleto" ? "Sem boleto" : "000123"} />
                     </div>
                     <div>
-                      <label className={labelClass}>Valor (R$) *</label>
-                      <input type="number" step="0.01" min="0" value={item.valor || ""} onChange={(e) => updateInstallment(index, "valor", parseFloat(e.target.value) || 0)} className={fieldClass} placeholder="0,00" />
+                      <label className={labelClass}>{item.status === "Nota sem boleto" ? "Valor (não se aplica)" : "Valor (R$) *"}</label>
+                      <input type="number" step="0.01" min="0" value={item.valor || ""} disabled={item.status === "Nota sem boleto"} onChange={(e) => updateInstallment(index, "valor", parseFloat(e.target.value) || 0)} className={`${fieldClass} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`} placeholder={item.status === "Nota sem boleto" ? "Sem boleto" : "0,00"} />
                     </div>
                     <div>
-                      <label className={labelClass}>Vencimento *</label>
-                      <input type="date" min={todayISO()} value={item.dataVencimento} onChange={(e) => updateInstallment(index, "dataVencimento", e.target.value)} className={fieldClass} />
+                      <label className={labelClass}>{item.status === "Nota sem boleto" ? "Vencimento (não se aplica)" : "Vencimento *"}</label>
+                      <input type="date" min={todayISO()} value={item.dataVencimento} disabled={item.status === "Nota sem boleto"} onChange={(e) => updateInstallment(index, "dataVencimento", e.target.value)} className={`${fieldClass} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`} />
                     </div>
                     <div>
                       <label className={labelClass}>Status</label>
@@ -196,16 +195,10 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>Data de lançamento</label>
-              <input type="text" value={formatDate(dataLancamento)} readOnly className={`${fieldClass} cursor-not-allowed bg-gray-100 text-gray-500`} />
-              <p className="mt-1 text-xs text-gray-400">Preenchida automaticamente, não editável.</p>
-            </div>
-            <div>
-              <label className={labelClass}>Responsável *</label>
-              <input type="text" value={responsavel} onChange={(e) => setResponsavel(e.target.value)} className={fieldClass} placeholder="Nome do responsável" />
-            </div>
+          <div>
+            <label className={labelClass}>Data de lançamento</label>
+            <input type="text" value={formatDate(dataLancamento)} readOnly className={`${fieldClass} cursor-not-allowed bg-gray-100 text-gray-500`} />
+            <p className="mt-1 text-xs text-gray-400">Preenchida automaticamente, não editável.</p>
           </div>
 
           <div>

@@ -10,7 +10,6 @@ export function exportToCSV(boletos: Boleto[]): void {
     "Data de Lançamento",
     "Data de Vencimento",
     "Status",
-    "Responsável",
     "Lançado por",
     "Observações",
   ];
@@ -23,7 +22,6 @@ export function exportToCSV(boletos: Boleto[]): void {
     formatDate(b.dataLancamento),
     formatDate(b.dataVencimento),
     b.status,
-    b.responsavel,
     b.user_nome || b.user_email || "",
     b.observacoes,
   ]);

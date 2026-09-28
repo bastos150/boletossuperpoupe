@@ -85,7 +85,6 @@ export function BoletoTable({
               <th className="px-4 py-3 font-semibold">Lançamento</th>
               <th className="px-4 py-3 font-semibold">Vencimento</th>
               <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold">Responsável</th>
               <th className="px-4 py-3 font-semibold">Lançado por</th>
               <th className="px-4 py-3 font-semibold">Observações</th>
               <th className="px-4 py-3 text-right font-semibold">Ações</th>
@@ -153,7 +152,6 @@ export function BoletoTable({
                   <td className="px-4 py-3">
                     <StatusBadge status={b.status} />
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{b.responsavel}</td>
                   <td className="px-4 py-3">
                     <div className="text-sm text-gray-700">{b.user_nome || b.user_email || "—"}</div>
                     {b.updated_at && (

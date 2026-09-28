@@ -68,7 +68,7 @@ function Dashboard() {
         dataLancamento: row.data_lancamento as string,
         dataVencimento: row.data_vencimento as string,
         status: row.status as Status,
-        responsavel: row.responsavel as string,
+        responsavel: (row.responsavel as string) || "",
         observacoes: (row.observacoes as string) || "",
         user_id: row.user_id as string,
         user_email: profileData?.email,
@@ -135,7 +135,7 @@ function Dashboard() {
       if (periodEnd && b.dataVencimento > periodEnd) return false;
       if (userFilter && b.user_id !== userFilter) return false;
       if (q) {
-        const hay = `${b.empresa} ${b.cnpj} ${b.numero} ${b.responsavel} ${b.nfe} ${b.dataLancamento} ${b.dataVencimento} ${b.valor}`.toLowerCase();
+        const hay = `${b.empresa} ${b.cnpj} ${b.numero} ${b.nfe} ${b.dataLancamento} ${b.dataVencimento} ${b.valor}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -147,7 +147,7 @@ function Dashboard() {
 
   const handleSave = (
     installments: BoletoInstallment[],
-    shared: { empresa: string; nfe: string; responsavel: string; observacoes: string },
+    shared: { empresa: string; nfe: string; observacoes: string },
     id?: string,
   ): string | null => {
     const existingNumbers = new Set(
@@ -170,16 +170,17 @@ function Dashboard() {
 
     if (id) {
       const inst = installments[0];
+      const hasBoleto = inst.status !== "Nota sem boleto";
       supabase
         .from("boletos")
         .update({
           empresa: shared.empresa,
           nfe: shared.nfe,
-          numero: inst.numero,
-          valor: inst.valor,
-          data_vencimento: inst.dataVencimento,
+          numero: hasBoleto ? inst.numero.trim() : null,
+          valor: hasBoleto ? inst.valor : null,
+          data_vencimento: hasBoleto ? inst.dataVencimento : null,
           status: inst.status,
-          responsavel: shared.responsavel,
+          responsavel: null,
           observacoes: shared.observacoes,
         })
         .eq("id", id)
@@ -189,17 +190,20 @@ function Dashboard() {
         });
     } else {
       const today = todayISO();
-      const rows = installments.map((inst) => ({
-        empresa: shared.empresa,
-        nfe: shared.nfe,
-        numero: inst.numero,
-        valor: inst.valor,
-        data_lancamento: today,
-        data_vencimento: inst.dataVencimento,
-        status: inst.status,
-        responsavel: shared.responsavel,
-        observacoes: shared.observacoes,
-      }));
+      const rows = installments.map((inst) => {
+        const hasBoleto = inst.status !== "Nota sem boleto";
+        return {
+          empresa: shared.empresa,
+          nfe: shared.nfe,
+          numero: hasBoleto ? inst.numero.trim() : null,
+          valor: hasBoleto ? inst.valor : null,
+          data_lancamento: today,
+          data_vencimento: hasBoleto ? inst.dataVencimento : null,
+          status: inst.status,
+          responsavel: null,
+          observacoes: shared.observacoes,
+        };
+      });
 
       supabase.from("boletos").insert(rows).then(({ error }) => {
         if (error) showToast("Erro ao cadastrar boleto.", "error");
