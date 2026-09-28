@@ -13,11 +13,15 @@ interface StatCardsProps {
 }
 
 export function StatCards({ boletos }: StatCardsProps) {
-  const valueOf = (b: Boleto) => b.status === "Nota sem boleto" ? b.valorNfe : b.valor;
-  const total = boletos.length;
-  const nfeCount = new Set(boletos.filter((b) => b.nfe).map((b) => b.nfe)).size;
-  const pendentes = boletos.filter((b) => b.status === "Pendente");
-  const vencem3dias = boletos.filter((b) => {
+  const comBoleto = boletos.filter((b) => {
+    const numero = b.numero.trim();
+    return numero !== "" && numero !== "-";
+  });
+  const valueOf = (b: Boleto) => b.valor;
+  const total = comBoleto.length;
+  const nfeCount = new Set(comBoleto.filter((b) => b.nfe).map((b) => b.nfe)).size;
+  const pendentes = comBoleto.filter((b) => b.status === "Pendente");
+  const vencem3dias = comBoleto.filter((b) => {
     const d = daysUntil(b.dataVencimento);
     return (b.status === "Pendente" || b.status === "Lançado") && d >= 0 && d <= 3;
   });
@@ -37,7 +41,7 @@ export function StatCards({ boletos }: StatCardsProps) {
     {
       label: "NF-e lançadas",
       value: String(nfeCount),
-      sub: `${boletos.filter((b) => b.nfe).length} boletos com NF-e`,
+      sub: `${comBoleto.filter((b) => b.nfe).length} boletos com NF-e`,
       icon: Receipt,
       color: "bg-[#1a4d8f]",
       iconBg: "bg-white/15",
