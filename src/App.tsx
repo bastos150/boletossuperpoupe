@@ -245,17 +245,6 @@ function Dashboard() {
     await fetchBoletos();
   };
 
-  const handleStatusChange = (id: string, status: Status) => {
-    supabase
-      .from("boletos")
-      .update({ status })
-      .eq("id", id)
-      .then(({ error }) => {
-        if (error) showToast("Erro ao alterar status.", "error");
-        else { showToast(`Status alterado para "${status}".`); fetchBoletos(); }
-      });
-  };
-
   const handleClearFilters = () => {
     setSearch("");
     setStatusFilter("Todos");
@@ -336,7 +325,6 @@ function Dashboard() {
             boletos={filtered}
             onEdit={handleEdit}
             onDelete={setDeleteTarget}
-            onStatusChange={handleStatusChange}
           />
         )}
 

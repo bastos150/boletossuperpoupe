@@ -1,5 +1,5 @@
 import { Pencil, Trash2, AlertTriangle } from "lucide-react";
-import type { Boleto, Status } from "@/types";
+import type { Boleto } from "@/types";
 import { formatCurrency, formatDate, daysUntil } from "@/utils/format";
 import { StatusBadge } from "./StatusBadge";
 
@@ -7,17 +7,14 @@ interface BoletoTableProps {
   boletos: Boleto[];
   onEdit: (b: Boleto) => void;
   onDelete: (b: Boleto) => void;
-  onStatusChange: (id: string, status: Status) => void;
 }
 
-const STATUS_OPTIONS: Status[] = ["Lançado", "Pendente", "Pago", "Vencido", "Cancelado", "Nota sem boleto", "Boleto sem nota"];
 const ALERT_STATUSES = ["Lançado", "Pendente"];
 
 export function BoletoTable({
   boletos,
   onEdit,
   onDelete,
-  onStatusChange,
 }: BoletoTableProps) {
   if (boletos.length === 0) {
     return (
@@ -168,20 +165,6 @@ export function BoletoTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <select
-                        value={b.status}
-                        onChange={(e) =>
-                          onStatusChange(b.id, e.target.value as Status)
-                        }
-                        className="rounded-md border border-gray-300 px-2 py-1 text-xs outline-none focus:border-[#0a1f44]"
-                        title="Alterar status"
-                      >
-                        {STATUS_OPTIONS.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
                       <button
                         onClick={() => onEdit(b)}
                         className="rounded-md p-1.5 text-blue-600 transition hover:bg-blue-50"
