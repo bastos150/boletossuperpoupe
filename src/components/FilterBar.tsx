@@ -1,24 +1,17 @@
 import { Search, Filter, X } from "lucide-react";
 import type { Status } from "@/types";
 
-export interface UserInfo {
-  id: string;
-  nome: string;
-  email: string;
-}
-
 interface FilterBarProps {
   search: string;
   setSearch: (v: string) => void;
   statusFilter: Status | "Todos";
   setStatusFilter: (v: Status | "Todos") => void;
+  launchDate: string;
+  setLaunchDate: (v: string) => void;
   periodStart: string;
   setPeriodStart: (v: string) => void;
   periodEnd: string;
   setPeriodEnd: (v: string) => void;
-  userFilter: string;
-  setUserFilter: (v: string) => void;
-  users: UserInfo[];
   onClear: () => void;
   hasActiveFilters: boolean;
 }
@@ -37,13 +30,12 @@ export function FilterBar({
   setSearch,
   statusFilter,
   setStatusFilter,
+  launchDate,
+  setLaunchDate,
   periodStart,
   setPeriodStart,
   periodEnd,
   setPeriodEnd,
-  userFilter,
-  setUserFilter,
-  users,
   onClear,
   hasActiveFilters,
 }: FilterBarProps) {
@@ -60,7 +52,7 @@ export function FilterBar({
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar empresa, CNPJ, boleto, NF-e, valor ou data"
+            placeholder="Buscar empresa"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[#0a1f44] focus:ring-1 focus:ring-[#0a1f44]"
@@ -80,19 +72,16 @@ export function FilterBar({
           ))}
         </select>
 
-        {/* Usuário */}
-        <select
-          value={userFilter}
-          onChange={(e) => setUserFilter(e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0a1f44] focus:ring-1 focus:ring-[#0a1f44]"
-        >
-          <option value="">Todos os usuários</option>
-          {users.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.nome || u.email}
-            </option>
-          ))}
-        </select>
+        {/* Data de lançamento */}
+        <div>
+          <label className="mb-1 block text-xs text-gray-500">Lançamento em</label>
+          <input
+            type="date"
+            value={launchDate}
+            onChange={(e) => setLaunchDate(e.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#0a1f44] focus:ring-1 focus:ring-[#0a1f44]"
+          />
+        </div>
 
         {/* Período início */}
         <div>

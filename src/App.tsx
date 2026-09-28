@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { StatCards } from "@/components/StatCards";
-import { FilterBar, type UserInfo } from "@/components/FilterBar";
+import { FilterBar } from "@/components/FilterBar";
 import { BoletoTable } from "@/components/BoletoTable";
 import { BoletoFormModal } from "@/components/BoletoFormModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -20,14 +20,13 @@ function Dashboard() {
   const { user, loading, signOut } = useAuth();
 
   const [boletos, setBoletos] = useState<Boleto[]>([]);
-  const [users, setUsers] = useState<UserInfo[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<Status | "Todos">("Todos");
+  const [launchDate, setLaunchDate] = useState("");
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
-  const [userFilter, setUserFilter] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Boleto | null>(null);
@@ -84,23 +83,11 @@ function Dashboard() {
     setDataLoading(false);
   }, []);
 
-  const fetchUsers = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .select("id, nome, email")
-      .order("nome", { ascending: true });
-
-    if (!error && data) {
-      setUsers(data as UserInfo[]);
-    }
-  }, []);
-
   useEffect(() => {
     if (user) {
       fetchBoletos();
-      fetchUsers();
     }
-  }, [user, fetchBoletos, fetchUsers]);
+  }, [user, fetchBoletos]);
 
   // Auto-mark overdue boletos
   const computedBoletos = useMemo(() => {
@@ -133,19 +120,16 @@ function Dashboard() {
     const q = search.trim().toLowerCase();
     return todayBoletos.filter((b) => {
       if (statusFilter !== "Todos" && b.status !== statusFilter) return false;
+      if (launchDate && b.dataLancamento !== launchDate) return false;
       if (periodStart && b.dataVencimento < periodStart) return false;
       if (periodEnd && b.dataVencimento > periodEnd) return false;
-      if (userFilter && b.user_id !== userFilter) return false;
-      if (q) {
-        const hay = `${b.empresa} ${b.cnpj} ${b.numero} ${b.nfe} ${b.dataLancamento} ${b.dataVencimento} ${b.valor} ${b.valorNfe}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
+      if (q && !b.empresa.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [todayBoletos, search, statusFilter, periodStart, periodEnd, userFilter]);
+  }, [todayBoletos, search, statusFilter, launchDate, periodStart, periodEnd]);
 
   const hasActiveFilters =
-    !!search || statusFilter !== "Todos" || !!periodStart || !!periodEnd || !!userFilter;
+    !!search || statusFilter !== "Todos" || !!launchDate || !!periodStart || !!periodEnd;
 
   const handleSave = async (
     installments: BoletoInstallment[],
@@ -217,7 +201,7 @@ function Dashboard() {
       showToast(
         rows.length === 1 ? "Boleto cadastrado com sucesso!" : `${rows.length} boletos cadastrados!`,
       );
-      await Promise.all([fetchBoletos(), fetchUsers()]);
+      await fetchBoletos();
     }
 
     return null;
@@ -226,11 +210,18 @@ function Dashboard() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
-    const { data, error } = await supabase
-      .from("boletos")
-      .delete()
-      .eq("id", deleteTarget.id)
-      .select("id");
+    const nfe = deleteTarget.nfe.trim();
+    const empresa = deleteTarget.empresa.trim();
+    let deleteQuery = supabase.from("boletos").delete().select("id");
+
+    // Uma NF-e pode ter vários boletos/parcela. Sem NF-e, apaga somente o boleto selecionado.
+    if (nfe) {
+      deleteQuery = deleteQuery.eq("empresa", empresa).eq("nfe", deleteTarget.nfe);
+    } else {
+      deleteQuery = deleteQuery.eq("id", deleteTarget.id);
+    }
+
+    const { data, error } = await deleteQuery;
     setDeleteLoading(false);
     if (error) {
       showToast(`Erro ao excluir boleto: ${error.message}`, "error");
@@ -248,9 +239,9 @@ function Dashboard() {
   const handleClearFilters = () => {
     setSearch("");
     setStatusFilter("Todos");
+    setLaunchDate("");
     setPeriodStart("");
     setPeriodEnd("");
-    setUserFilter("");
   };
 
   const handleExport = () => {
@@ -305,13 +296,12 @@ function Dashboard() {
           setSearch={setSearch}
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
+          launchDate={launchDate}
+          setLaunchDate={setLaunchDate}
           periodStart={periodStart}
           setPeriodStart={setPeriodStart}
           periodEnd={periodEnd}
           setPeriodEnd={setPeriodEnd}
-          userFilter={userFilter}
-          setUserFilter={setUserFilter}
-          users={users}
           onClear={handleClearFilters}
           hasActiveFilters={hasActiveFilters}
         />
@@ -342,7 +332,9 @@ function Dashboard() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        message={`Deseja realmente excluir o boleto "${deleteTarget?.numero}" da empresa "${deleteTarget?.empresa}"? Esta ação não pode ser desfeita.`}
+        message={deleteTarget?.nfe.trim()
+          ? `Deseja realmente excluir todos os boletos vinculados à NF-e "${deleteTarget.nfe}" da empresa "${deleteTarget.empresa}"? Esta ação não pode ser desfeita.`
+          : `Deseja realmente excluir o boleto "${deleteTarget?.numero}" da empresa "${deleteTarget?.empresa}"? Esta ação não pode ser desfeita.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         busy={deleteLoading}
