@@ -5,6 +5,7 @@ interface ConfirmDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  busy?: boolean;
 }
 
 export function ConfirmDialog({
@@ -12,6 +13,7 @@ export function ConfirmDialog({
   message,
   onConfirm,
   onCancel,
+  busy = false,
 }: ConfirmDialogProps) {
   if (!open) return null;
 
@@ -28,15 +30,17 @@ export function ConfirmDialog({
           <div className="mt-6 flex w-full gap-3">
             <button
               onClick={onCancel}
+              disabled={busy}
               className="flex-1 rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-200"
             >
               Cancelar
             </button>
             <button
               onClick={onConfirm}
+              disabled={busy}
               className="flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
             >
-              Excluir
+              {busy ? "Excluindo..." : "Excluir"}
             </button>
           </div>
         </div>

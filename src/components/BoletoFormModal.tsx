@@ -12,7 +12,7 @@ interface BoletoFormModalProps {
     empresa: string;
     nfe: string;
     observacoes: string;
-  }, id?: string) => string | null;
+  }, id?: string) => Promise<string | null>;
 }
 
 function emptyInstallment(): BoletoInstallment {
@@ -99,20 +99,20 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
     setError("");
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const validationError = validate();
     if (validationError) return setError(validationError);
-    const result = onSave(installments, shared, editing?.id);
+    const result = await onSave(installments, shared, editing?.id);
     if (result) return setError(result);
-    setLastSaved({ count: installments.length, nfe: nfe.trim() });
+    onClose();
   };
 
-  const handleSaveAndNew = (event: React.FormEvent) => {
+  const handleSaveAndNew = async (event: React.FormEvent) => {
     event.preventDefault();
     const validationError = validate();
     if (validationError) return setError(validationError);
-    const result = onSave(installments, shared);
+    const result = await onSave(installments, shared);
     if (result) return setError(result);
     setLastSaved({ count: installments.length, nfe: nfe.trim() });
     resetForNext();

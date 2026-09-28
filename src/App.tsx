@@ -32,6 +32,7 @@ function Dashboard() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Boleto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Boleto | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [userPanelOpen, setUserPanelOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const currentDate = todayISO();
@@ -146,11 +147,11 @@ function Dashboard() {
   const hasActiveFilters =
     !!search || statusFilter !== "Todos" || !!periodStart || !!periodEnd || !!userFilter;
 
-  const handleSave = (
+  const handleSave = async (
     installments: BoletoInstallment[],
     shared: { empresa: string; nfe: string; observacoes: string },
     id?: string,
-  ): string | null => {
+  ): Promise<string | null> => {
     const existingNumbers = new Set(
       boletos
         .filter((b) => b.id !== id && b.numero.trim())
@@ -172,7 +173,7 @@ function Dashboard() {
     if (id) {
       const inst = installments[0];
       const hasBoleto = inst.status !== "Nota sem boleto";
-      supabase
+      const { data, error } = await supabase
         .from("boletos")
         .update({
           empresa: shared.empresa,
@@ -186,10 +187,12 @@ function Dashboard() {
           observacoes: shared.observacoes,
         })
         .eq("id", id)
-        .then(({ error }) => {
-          if (error) showToast("Erro ao atualizar boleto.", "error");
-          else { showToast("Boleto atualizado com sucesso!"); fetchBoletos(); }
-        });
+        .select("id")
+        .maybeSingle();
+      if (error) return `Erro ao atualizar boleto: ${error.message}`;
+      if (!data) return "Não foi possível atualizar: boleto não encontrado ou sem permissão.";
+      showToast("Boleto atualizado com sucesso!");
+      await fetchBoletos();
     } else {
       const today = todayISO();
       const rows = installments.map((inst) => {
@@ -208,32 +211,38 @@ function Dashboard() {
         };
       });
 
-      supabase.from("boletos").insert(rows).then(({ error }) => {
-        if (error) showToast("Erro ao cadastrar boleto.", "error");
-        else {
-          showToast(
-            rows.length === 1 ? "Boleto cadastrado com sucesso!" : `${rows.length} boletos cadastrados!`,
-          );
-          fetchBoletos();
-          fetchUsers();
-        }
-      });
+      const { data, error } = await supabase.from("boletos").insert(rows).select("id");
+      if (error) return `Erro ao cadastrar boleto: ${error.message}`;
+      if (!data || data.length !== rows.length) return "Não foi possível confirmar o cadastro dos boletos.";
+      showToast(
+        rows.length === 1 ? "Boleto cadastrado com sucesso!" : `${rows.length} boletos cadastrados!`,
+      );
+      await Promise.all([fetchBoletos(), fetchUsers()]);
     }
 
     return null;
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    supabase
+    setDeleteLoading(true);
+    const { data, error } = await supabase
       .from("boletos")
       .delete()
       .eq("id", deleteTarget.id)
-      .then(({ error }) => {
-        if (error) showToast("Erro ao excluir boleto.", "error");
-        else { showToast("Boleto excluído.", "error"); fetchBoletos(); }
-      });
+      .select("id");
+    setDeleteLoading(false);
+    if (error) {
+      showToast(`Erro ao excluir boleto: ${error.message}`, "error");
+      return;
+    }
+    if (!data || data.length === 0) {
+      showToast("Não foi possível excluir: boleto não encontrado ou sem permissão.", "error");
+      return;
+    }
     setDeleteTarget(null);
+    showToast("Boleto excluído!");
+    await fetchBoletos();
   };
 
   const handleStatusChange = (id: string, status: Status) => {
@@ -348,6 +357,7 @@ function Dashboard() {
         message={`Deseja realmente excluir o boleto "${deleteTarget?.numero}" da empresa "${deleteTarget?.empresa}"? Esta ação não pode ser desfeita.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+        busy={deleteLoading}
       />
 
       <UserPanel
