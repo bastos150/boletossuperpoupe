@@ -190,7 +190,7 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
                     <div>
                       <label className={labelClass}>Status</label>
                       <select value={item.status} onChange={(e) => updateInstallment(index, "status", e.target.value)} className={fieldClass}>
-                        {(["Lançado", "Nota sem boleto", "Boleto sem nota", "Pendente", "Pago", "Vencido", "Cancelado"] as Status[]).map((s) => (
+                        {(["Lançado", "Nota sem boleto", "Boleto sem nota", "Pendente", "Pago"] as Status[]).map((s) => (
                           <option key={s} value={s}>{s}</option>
                         ))}
                       </select>

@@ -28,8 +28,6 @@ const STATUS_OPTIONS: (Status | "Todos")[] = [
   "Lançado",
   "Pendente",
   "Pago",
-  "Vencido",
-  "Cancelado",
   "Nota sem boleto",
   "Boleto sem nota",
 ];
