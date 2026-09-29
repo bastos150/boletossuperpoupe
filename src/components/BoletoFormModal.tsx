@@ -4,6 +4,42 @@ import { X, Save, PlusCircle, CheckCircle2, Trash2 } from "lucide-react";
 import type { Boleto, BoletoInstallment, Status } from "@/types";
 import { todayISO, formatDate } from "@/utils/format";
 
+const DRAFT_STORAGE_KEY = "superpoupe.boleto-form-draft.v1";
+
+interface BoletoDraft {
+  empresa: string;
+  nfe: string;
+  observacoes: string;
+  dataLancamento: string;
+  installments: BoletoInstallment[];
+}
+
+function readDraft(): BoletoDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as Partial<BoletoDraft>;
+    if (!Array.isArray(draft.installments)) return null;
+    return {
+      empresa: typeof draft.empresa === "string" ? draft.empresa : "",
+      nfe: typeof draft.nfe === "string" ? draft.nfe : "",
+      observacoes: typeof draft.observacoes === "string" ? draft.observacoes : "",
+      dataLancamento: typeof draft.dataLancamento === "string" ? draft.dataLancamento : todayISO(),
+      installments: draft.installments,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    // Persistência local pode estar indisponível no navegador; o Supabase continua sendo a fonte oficial.
+  }
+}
+
 interface BoletoFormModalProps {
   open: boolean;
   editing: Boleto | null;
@@ -27,8 +63,11 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
   const [installments, setInstallments] = useState<BoletoInstallment[]>([emptyInstallment()]);
   const [error, setError] = useState("");
   const [lastSaved, setLastSaved] = useState<{ count: number; nfe: string } | null>(null);
+  const formKey = editing ? `edit:${editing.id}` : "new";
+  const [draftReadyKey, setDraftReadyKey] = useState<string | null>(null);
 
   useEffect(() => {
+    setDraftReadyKey(null);
     if (editing) {
       setEmpresa(editing.empresa);
       setNfe(editing.nfe);
@@ -43,15 +82,32 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
       }]);
       setLastSaved(null);
     } else {
-      setEmpresa("");
-      setNfe("");
-      setObservacoes("");
-      setDataLancamento(todayISO());
-      setInstallments([emptyInstallment()]);
+      const draft = open ? readDraft() : null;
+      setEmpresa(draft?.empresa ?? "");
+      setNfe(draft?.nfe ?? "");
+      setObservacoes(draft?.observacoes ?? "");
+      setDataLancamento(draft?.dataLancamento ?? todayISO());
+      setInstallments(draft?.installments?.length ? draft.installments : [emptyInstallment()]);
       setLastSaved(null);
     }
     setError("");
-  }, [editing, open]);
+    setDraftReadyKey(formKey);
+  }, [editing, open, formKey]);
+
+  useEffect(() => {
+    if (!open || editing || draftReadyKey !== formKey) return;
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+        empresa,
+        nfe,
+        observacoes,
+        dataLancamento,
+        installments,
+      } satisfies BoletoDraft));
+    } catch {
+      // O salvamento principal continua no Supabase após a confirmação do formulário.
+    }
+  }, [open, editing, formKey, draftReadyKey, empresa, nfe, observacoes, dataLancamento, installments]);
 
   if (!open) return null;
 
@@ -91,12 +147,14 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
   const shared = { empresa, nfe, observacoes };
 
   const resetForNext = () => {
+    clearDraft();
     setEmpresa("");
     setNfe("");
     setObservacoes("");
     setDataLancamento(todayISO());
     setInstallments([emptyInstallment()]);
     setError("");
+    setDraftReadyKey("new");
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -105,6 +163,7 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
     if (validationError) return setError(validationError);
     const result = await onSave(installments, shared, editing?.id);
     if (result) return setError(result);
+    clearDraft();
     onClose();
   };
 
@@ -129,6 +188,7 @@ export function BoletoFormModal({ open, editing, onClose, onSave }: BoletoFormMo
           <div>
             <h2 className="text-lg font-bold text-[#0a1f44]">{editing ? "Editar boleto" : "Novo boleto"}</h2>
             {!editing && <p className="mt-0.5 text-xs text-gray-500">Uma NF-e pode ter vários boletos com vencimentos diferentes.</p>}
+            {!editing && draftReadyKey === "new" && <p className="mt-0.5 text-xs font-medium text-emerald-600">Rascunho salvo automaticamente neste navegador.</p>}
           </div>
           <button onClick={onClose} className="rounded-md p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"><X className="h-5 w-5" /></button>
         </div>
