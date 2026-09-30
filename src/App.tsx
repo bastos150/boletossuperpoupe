@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Header } from "@/components/Header";
 import { StatCards } from "@/components/StatCards";
 import { FilterBar } from "@/components/FilterBar";
@@ -21,6 +21,8 @@ function Dashboard() {
 
   const [boletos, setBoletos] = useState<Boleto[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const fetchRequestRef = useRef(0);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<Status | "Todos">("Todos");
@@ -34,13 +36,13 @@ function Dashboard() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [userPanelOpen, setUserPanelOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const currentDate = todayISO();
-
   const showToast = (message: string, type: ToastType = "success") =>
     setToast({ message, type });
 
   const fetchBoletos = useCallback(async () => {
+    const requestId = ++fetchRequestRef.current;
     setDataLoading(true);
+    setDataError(null);
     const { data, error } = await supabase
       .from("boletos")
       .select(`
@@ -50,8 +52,11 @@ function Dashboard() {
       `)
       .order("created_at", { ascending: false });
 
+    if (requestId !== fetchRequestRef.current) return;
+
     if (error) {
-      showToast("Erro ao carregar boletos.", "error");
+      console.error("Erro ao carregar boletos", error);
+      setDataError("Não foi possível consultar os boletos. Seus dados não foram apagados.");
       setDataLoading(false);
       return;
     }
@@ -80,6 +85,7 @@ function Dashboard() {
     });
 
     setBoletos(mapped);
+    setDataError(null);
     setDataLoading(false);
   }, []);
 
@@ -111,14 +117,9 @@ function Dashboard() {
     }
   }, [computedBoletos, boletos]);
 
-  const todayBoletos = useMemo(
-    () => computedBoletos.filter((b) => b.dataLancamento === currentDate),
-    [computedBoletos, currentDate],
-  );
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return todayBoletos.filter((b) => {
+    return computedBoletos.filter((b) => {
       if (statusFilter !== "Todos" && b.status !== statusFilter) return false;
       if (launchDate && b.dataLancamento !== launchDate) return false;
       if (periodStart && b.dataVencimento < periodStart) return false;
@@ -126,7 +127,7 @@ function Dashboard() {
       if (q && !b.empresa.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [todayBoletos, search, statusFilter, launchDate, periodStart, periodEnd]);
+  }, [computedBoletos, search, statusFilter, launchDate, periodStart, periodEnd]);
 
   const hasActiveFilters =
     !!search || statusFilter !== "Todos" || !!launchDate || !!periodStart || !!periodEnd;
@@ -289,33 +290,47 @@ function Dashboard() {
       />
 
       <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
-        <StatCards boletos={todayBoletos} />
-
-        <FilterBar
-          search={search}
-          setSearch={setSearch}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          launchDate={launchDate}
-          setLaunchDate={setLaunchDate}
-          periodStart={periodStart}
-          setPeriodStart={setPeriodStart}
-          periodEnd={periodEnd}
-          setPeriodEnd={setPeriodEnd}
-          onClear={handleClearFilters}
-          hasActiveFilters={hasActiveFilters}
-        />
-
         {dataLoading ? (
           <div className="flex items-center justify-center rounded-xl bg-white py-16 shadow-sm">
-            <span className="text-sm text-gray-400">Carregando boletos...</span>
+            <span className="text-sm text-gray-400">Consultando boletos...</span>
           </div>
+        ) : dataError ? (
+          <section role="alert" className="rounded-xl border border-red-200 bg-red-50 p-6 text-center shadow-sm">
+            <h2 className="text-base font-bold text-red-800">Falha ao consultar os boletos</h2>
+            <p className="mt-2 text-sm text-red-700">{dataError}</p>
+            <button
+              type="button"
+              onClick={() => void fetchBoletos()}
+              className="mt-4 rounded-md bg-[#0a1f44] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2a5c]"
+            >
+              Tentar novamente
+            </button>
+          </section>
         ) : (
-          <BoletoTable
-            boletos={filtered}
-            onEdit={handleEdit}
-            onDelete={setDeleteTarget}
-          />
+          <>
+            <StatCards boletos={computedBoletos} />
+
+            <FilterBar
+              search={search}
+              setSearch={setSearch}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              launchDate={launchDate}
+              setLaunchDate={setLaunchDate}
+              periodStart={periodStart}
+              setPeriodStart={setPeriodStart}
+              periodEnd={periodEnd}
+              setPeriodEnd={setPeriodEnd}
+              onClear={handleClearFilters}
+              hasActiveFilters={hasActiveFilters}
+            />
+
+            <BoletoTable
+              boletos={filtered}
+              onEdit={handleEdit}
+              onDelete={setDeleteTarget}
+            />
+          </>
         )}
 
         <footer className="pt-2 text-center text-xs text-gray-400">
